@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -38,13 +39,24 @@ type envVars struct {
 	StravaRefreshToken string `mapstructure:"STRAVA_REFRESH_TOKEN"`
 }
 
+type historicalData struct {
+}
+
+func (hd *historicalData) GetData() (y, error) {
+	return nil, nil
+}
+
+func (hd *historicalData) StoreData(year int, month time.Month, distance float64) error {
+	return nil
+}
+
 func main() {
 
 	// setup logging
 	logger := log.Default()
 
 	var config envVars
-	// Load Config
+	// Load environment configuration - IE secret tokens
 	viper.SetConfigName("strava")
 	viper.AddConfigPath(".")
 	viper.SetConfigType("env")
@@ -66,6 +78,7 @@ func main() {
 	authUrl := "https://www.strava.com/oauth/token"
 	activitesUrl := "https://www.strava.com/api/v3/athlete/activities"
 
+	// Authenticate to get access token
 	req, err := http.NewRequest("POST", authUrl, strings.NewReader("client_id=115159&client_secret=6e0451fb8dcfb7b4de3a16f56ffab22eb01df0cf&grant_type=refresh_token&refresh_token=d705e4806714d9a00f4a9a33aaeed4550b9fb252&f=json"))
 	if err != nil {
 		//Handle Error
@@ -91,6 +104,7 @@ func main() {
 		logger.Fatal(readErr)
 	}
 
+	// Unmarshall json response to struct
 	var result authResponse
 	if err := json.Unmarshal(body, &result); err != nil { // Parse []byte to go struct pointer
 		logger.Println("Can not unmarshal JSON")
@@ -98,10 +112,12 @@ func main() {
 
 	logger.Println("Authenticated - Preparing to get activities by page of 200")
 
+	// Create a slice of activities to hold all activities
 	activities := make([]activity, 0)
 	page := 1
 
 	for {
+		// Create a placeholder slice of activities for each page of results (200 max)
 		pageActivities := make([]activity, 0)
 		req, err = http.NewRequest("GET", activitesUrl, nil)
 		if err != nil {
@@ -133,6 +149,7 @@ func main() {
 		}
 
 		if len(pageActivities) == 200 {
+			// if we get a total of 200 activities, there may be
 			logger.Printf("Page %d retrieved with %d activities\n", page, len(pageActivities))
 			page++
 			activities = append(activities, pageActivities...)
@@ -143,19 +160,29 @@ func main() {
 		}
 	}
 
-	logger.Printf("Number of activities: %d\n", len(activities))
+	// Log total number of activities
+	logger.Printf("Total Number of activities: %d\n", len(activities))
 
 	var deskCount int
 	var distance float64
 
 	for _, activity := range activities {
 		if strings.ToLower(activity.Name) == "desk treadmill" {
+			logger.Printf("Desk Treadmill Activity: %s\n", activity.StartDate)
+
+			// timestamp, err := time.Parse(time.RFC3339, activity.StartDate)
+			// if err != nil {
+			// 	logger.Fatalf("Error parsing date: %s\n", activity.StartDate)
+			// 	return
+			// }
 			distance += activity.Distance
 			deskCount++
 		}
 	}
 
+	// Log number of desk treadmill activities
 	logger.Printf("Desk Treadmill Activities: %d\n", deskCount)
-	logger.Printf("Distance: %f Miles\n", distance*0.000621371)
+	// Log number of miles after converting meters to miles
+	logger.Printf("Total Distance: %f Miles\n", distance*0.000621371)
 
 }
