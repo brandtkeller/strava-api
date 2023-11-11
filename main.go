@@ -42,8 +42,8 @@ type envVars struct {
 type historicalData struct {
 }
 
-func (hd *historicalData) GetData() (y, error) {
-	return nil, nil
+func (hd *historicalData) GetData() (int, error) {
+	return 0, nil
 }
 
 func (hd *historicalData) StoreData(year int, month time.Month, distance float64) error {
@@ -168,7 +168,7 @@ func main() {
 
 	for _, activity := range activities {
 		if strings.ToLower(activity.Name) == "desk treadmill" {
-			logger.Printf("Desk Treadmill Activity: %s\n", activity.StartDate)
+			// logger.Printf("Desk Treadmill Activity: %s\n", activity.StartDate)
 
 			// timestamp, err := time.Parse(time.RFC3339, activity.StartDate)
 			// if err != nil {
@@ -183,6 +183,6 @@ func main() {
 	// Log number of desk treadmill activities
 	logger.Printf("Desk Treadmill Activities: %d\n", deskCount)
 	// Log number of miles after converting meters to miles
-	logger.Printf("Total Distance: %f Miles\n", distance*0.000621371)
+	logger.Printf("Total Distance: %f Miles since September 12th \n", distance*0.000621371)
 
 }
