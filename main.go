@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	// "fmt"
 	"io"
 	"log"
 	"net/http"
@@ -37,6 +38,7 @@ type envVars struct {
 	StravaClientId     string `mapstructure:"STRAVA_CLIENT_ID"`
 	StravaClientSecret string `mapstructure:"STRAVA_CLIENT_SECRET"`
 	StravaRefreshToken string `mapstructure:"STRAVA_REFRESH_TOKEN"`
+	StravaAccessToken  string `mapstructure:"STRAVA_ACCESS_TOKEN"`
 }
 
 type historicalData struct {
@@ -75,40 +77,46 @@ func main() {
 	// Create HTTP Client
 	client := http.Client{}
 
-	authUrl := "https://www.strava.com/oauth/token"
+	// authUrl := "https://www.strava.com/oauth/token"
 	activitesUrl := "https://www.strava.com/api/v3/athlete/activities"
 
-	// Authenticate to get access token
-	req, err := http.NewRequest("POST", authUrl, strings.NewReader("client_id=115159&client_secret=6e0451fb8dcfb7b4de3a16f56ffab22eb01df0cf&grant_type=refresh_token&refresh_token=d705e4806714d9a00f4a9a33aaeed4550b9fb252&f=json"))
-	if err != nil {
-		//Handle Error
-		logger.Fatal(err)
-	}
+	// // Authenticate to get access token
+	// authInfo := fmt.Sprintf("client_id=%s&grant_type=refresh_token&refresh_token=%s&f=json", config.StravaClientId, config.StravaRefreshToken)
+	// req, err := http.NewRequest("POST", authUrl, strings.NewReader(authInfo))
+	// if err != nil {
+	// 	//Handle Error
+	// 	logger.Fatal(err)
+	// }
 
-	q := req.URL.Query()
-	q.Add("client_id", config.StravaClientId)
-	q.Add("client_secret", config.StravaClientSecret)
-	q.Add("refresh_token", config.StravaRefreshToken)
-	q.Add("grant_type", "refresh_token")
-	q.Add("f", "json")
-	req.URL.RawQuery = q.Encode()
+	// q := req.URL.Query()
+	// q.Add("client_id", config.StravaClientId)
+	// q.Add("client_secret", config.StravaClientSecret)
+	// q.Add("refresh_token", config.StravaRefreshToken)
+	// q.Add("grant_type", "refresh_token")
+	// q.Add("f", "json")
+	// req.URL.RawQuery = q.Encode()
 
-	res, err := client.Do(req)
-	if err != nil {
-		//Handle Error
-		logger.Fatal(err)
-	}
+	// res, err := client.Do(req)
+	// if err != nil {
+	// 	//Handle Error
+	// 	logger.Fatal(err)
+	// }
 
-	body, readErr := io.ReadAll(res.Body)
-	if readErr != nil {
-		logger.Fatal(readErr)
-	}
+	// body, readErr := io.ReadAll(res.Body)
+	// if readErr != nil {
+	// 	logger.Fatal(readErr)
+	// }
+
+	// logger.Println(string(body))
 
 	// Unmarshall json response to struct
-	var result authResponse
-	if err := json.Unmarshal(body, &result); err != nil { // Parse []byte to go struct pointer
-		logger.Println("Can not unmarshal JSON")
+	result := authResponse{
+		AccessToken:  config.StravaAccessToken,
+		RefreshToken: config.StravaRefreshToken,
 	}
+	// if err := json.Unmarshal(body, &result); err != nil { // Parse []byte to go struct pointer
+	// 	logger.Println("Can not unmarshal JSON")
+	// }
 
 	logger.Println("Authenticated - Preparing to get activities by page of 200")
 
@@ -119,7 +127,7 @@ func main() {
 	for {
 		// Create a placeholder slice of activities for each page of results (200 max)
 		pageActivities := make([]activity, 0)
-		req, err = http.NewRequest("GET", activitesUrl, nil)
+		req, err := http.NewRequest("GET", activitesUrl, nil)
 		if err != nil {
 			//Handle Error
 			logger.Fatal(err)
@@ -133,16 +141,18 @@ func main() {
 			"Authorization": []string{"Bearer " + result.AccessToken},
 		}
 
-		res, err = client.Do(req)
+		res, err := client.Do(req)
 		if err != nil {
 			//Handle Error
 			logger.Fatal(err)
 		}
 
-		body, readErr = io.ReadAll(res.Body)
+		body, readErr := io.ReadAll(res.Body)
 		if readErr != nil {
 			logger.Fatal(readErr)
 		}
+
+		logger.Println(string(body))
 
 		if err := json.Unmarshal(body, &pageActivities); err != nil { // Parse []byte to go struct pointer
 			logger.Fatal(err)
